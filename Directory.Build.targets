@@ -1,5 +1,13 @@
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  <Import Project="eng\testing\linker\trimmingTests.targets" Condition="'$(IsPublishedAppTestProject)' == 'true'" />
+
+  <ItemGroup>
+    <FrameworkReference Update="Microsoft.NETCore.App"
+                        Condition="'$(TargetFramework)' == 'net8.0'"
+                        RuntimeFrameworkVersion="$(MicrosoftNETCoreAppRuntimewinx64Version)"
+                        TargetingPackVersion="$(MicrosoftNETCoreAppRefVersion)" />
+  </ItemGroup>
 
   <Target Name="GetCustomAssemblyAttributes"
           BeforeTargets="GetAssemblyAttributes"

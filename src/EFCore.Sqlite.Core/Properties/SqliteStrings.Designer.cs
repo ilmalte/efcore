@@ -68,6 +68,14 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Internal
                 operation);
 
         /// <summary>
+        ///     SQLite version {sqliteVersion} is being used, but version 3.38.0 or higher is required for querying into JSON collections.
+        /// </summary>
+        public static string QueryingIntoJsonCollectionsNotSupported(object? sqliteVersion)
+            => string.Format(
+                GetString("QueryingIntoJsonCollectionsNotSupported", nameof(sqliteVersion)),
+                sqliteVersion);
+
+        /// <summary>
         ///     Generating idempotent scripts for migrations is not currently supported for SQLite. See https://go.microsoft.com/fwlink/?LinkId=723262 for more information and examples.
         /// </summary>
         public static string MigrationScriptGenerationNotSupported
@@ -79,6 +87,14 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Internal
         public static string OrderByNotSupported(object? type)
             => string.Format(
                 GetString("OrderByNotSupported", nameof(type)),
+                type);
+
+        /// <summary>
+        ///     Querying JSON collections with element provider type '{type}' isn't supported because of SQLite limitations.
+        /// </summary>
+        public static string QueryingJsonCollectionOfGivenTypeNotSupported(object? type)
+            => string.Format(
+                GetString("QueryingJsonCollectionOfGivenTypeNotSupported", nameof(type)),
                 type);
 
         /// <summary>

@@ -144,6 +144,12 @@ WHERE "o"."OrderID" = 11077 AND sign("o"."Discount") > 0
     public override Task Where_math_truncate(bool async)
         => AssertTranslationFailed(() => base.Where_math_truncate(async));
 
+    public override Task Where_math_degrees(bool async)
+        => AssertTranslationFailed(() => base.Where_math_degrees(async));
+
+    public override Task Where_math_radians(bool async)
+        => AssertTranslationFailed(() => base.Where_math_radians(async));
+
     public override Task Where_mathf_acos(bool async)
         => AssertTranslationFailed(() => base.Where_mathf_acos(async));
 
@@ -206,6 +212,12 @@ WHERE "o"."OrderID" = 11077 AND sign("o"."Discount") > 0
 
     public override Task Where_mathf_truncate(bool async)
         => AssertTranslationFailed(() => base.Where_mathf_truncate(async));
+
+    public override Task Where_mathf_degrees(bool async)
+        => AssertTranslationFailed(() => base.Where_mathf_degrees(async));
+
+    public override Task Where_mathf_radians(bool async)
+        => AssertTranslationFailed(() => base.Where_mathf_radians(async));
 
     public override async Task String_StartsWith_Literal(bool async)
     {
@@ -903,6 +915,18 @@ WHERE "c"."Region" IS NOT NULL AND "c"."Region" <> ''
 
     public override Task Datetime_subtraction_TotalDays(bool async)
         => AssertTranslationFailed(() => base.Datetime_subtraction_TotalDays(async));
+
+    public override async Task Where_DateOnly_FromDateTime(bool async)
+    {
+        await base.Where_DateOnly_FromDateTime(async);
+
+        AssertSql(
+"""
+SELECT "o"."OrderID", "o"."CustomerID", "o"."EmployeeID", "o"."OrderDate"
+FROM "Orders" AS "o"
+WHERE "o"."OrderDate" IS NOT NULL AND date("o"."OrderDate") = '1996-09-16'
+""");
+    }
 
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);

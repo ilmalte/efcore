@@ -1140,6 +1140,14 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => GetString("JsonPropertyNameShouldBeConfiguredOnNestedNavigation");
 
         /// <summary>
+        ///     Invalid token type: '{tokenType}'.
+        /// </summary>
+        public static string JsonReaderInvalidTokenType(object? tokenType)
+            => string.Format(
+                GetString("JsonReaderInvalidTokenType", nameof(tokenType)),
+                tokenType);
+
+        /// <summary>
         ///     Entity {entity} is required but the JSON element containing it is null.
         /// </summary>
         public static string JsonRequiredEntityWithNullJson(object? entity)
@@ -1506,6 +1514,14 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         /// </summary>
         public static string SetOperationsOnDifferentStoreTypes
             => GetString("SetOperationsOnDifferentStoreTypes");
+
+        /// <summary>
+        ///     A set operation 'setOperationType' requires valid type mapping for at least one of its sides.
+        /// </summary>
+        public static string SetOperationsRequireAtLeastOneSideWithValidTypeMapping(object? setOperationType)
+        => string.Format(
+            GetString("SetOperationsRequireAtLeastOneSideWithValidTypeMapping", nameof(setOperationType)),
+            setOperationType);
 
         /// <summary>
         ///     The SetProperty&lt;TProperty&gt; method can only be used within 'ExecuteUpdate' method.
@@ -1994,7 +2010,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 nodeType, expressionType);
 
         /// <summary>
-        ///     No relational type mapping can be found for property '{entity}.{property}' and the current provider doesn't specify a default store type for the properties of type '{clrType}'. 
+        ///     No relational type mapping can be found for property '{entity}.{property}' and the current provider doesn't specify a default store type for the properties of type '{clrType}'.
         /// </summary>
         public static string UnsupportedPropertyType(object? entity, object? property, object? clrType)
             => string.Format(
@@ -2220,7 +2236,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics.Internal
         }
 
         /// <summary>
-        ///     An error occurred while rolling back the transaction to a savepoint, after an exception occured during `SaveChanges`.
+        ///     An error occurred while rolling back the transaction to a savepoint, after an exception occurred during `SaveChanges`.
         /// </summary>
         public static EventDefinition LogBatchExecutorFailedToRollbackToSavepoint(IDiagnosticsLogger logger)
         {

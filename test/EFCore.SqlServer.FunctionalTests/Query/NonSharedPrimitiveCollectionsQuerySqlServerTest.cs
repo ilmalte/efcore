@@ -1,20 +1,38 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.SqlServer.Internal;
 using NetTopologySuite.Geometries;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+using static System.Linq.Expressions.Expression;
+
 public class NonSharedPrimitiveCollectionsQuerySqlServerTest : NonSharedPrimitiveCollectionsQueryRelationalTestBase
 {
     #region Support for specific element types
+
+    public override async Task Array_of_string()
+    {
+        await base.Array_of_string();
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM OPENJSON([t].[SomeArray]) WITH ([value] nvarchar(max) '$') AS [s]
+    WHERE [s].[value] = N'a') = 2
+""");
+    }
 
     public override async Task Array_of_int()
     {
         await base.Array_of_int();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -29,7 +47,7 @@ WHERE (
         await base.Array_of_long();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -44,7 +62,7 @@ WHERE (
         await base.Array_of_short();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -54,12 +72,16 @@ WHERE (
 """);
     }
 
+    [ConditionalFact]
+    public override Task Array_of_byte()
+        => base.Array_of_byte();
+
     public override async Task Array_of_double()
     {
         await base.Array_of_double();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -74,7 +96,7 @@ WHERE (
         await base.Array_of_float();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -89,7 +111,7 @@ WHERE (
         await base.Array_of_decimal();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -104,7 +126,7 @@ WHERE (
         await base.Array_of_DateTime();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -114,12 +136,42 @@ WHERE (
 """);
     }
 
+    public override async Task Array_of_DateTime_with_milliseconds()
+    {
+        await base.Array_of_DateTime_with_milliseconds();
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM OPENJSON([t].[SomeArray]) WITH ([value] datetime2 '$') AS [s]
+    WHERE [s].[value] = '2023-01-01T12:30:00.1230000') = 2
+""");
+    }
+
+    public override async Task Array_of_DateTime_with_microseconds()
+    {
+        await base.Array_of_DateTime_with_microseconds();
+
+        AssertSql(
+            """
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM OPENJSON([t].[SomeArray]) WITH ([value] datetime2 '$') AS [s]
+    WHERE [s].[value] = '2023-01-01T12:30:00.1234560') = 2
+""");
+    }
+
     public override async Task Array_of_DateOnly()
     {
         await base.Array_of_DateOnly();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -134,7 +186,7 @@ WHERE (
         await base.Array_of_TimeOnly();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -144,12 +196,42 @@ WHERE (
 """);
     }
 
+    public override async Task Array_of_TimeOnly_with_milliseconds()
+    {
+        await base.Array_of_TimeOnly_with_milliseconds();
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM OPENJSON([t].[SomeArray]) WITH ([value] time '$') AS [s]
+    WHERE [s].[value] = '12:30:00.123') = 2
+""");
+    }
+
+    public override async Task Array_of_TimeOnly_with_microseconds()
+    {
+        await base.Array_of_TimeOnly_with_microseconds();
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM OPENJSON([t].[SomeArray]) WITH ([value] time '$') AS [s]
+    WHERE [s].[value] = '12:30:00.123456') = 2
+""");
+    }
+
     public override async Task Array_of_DateTimeOffset()
     {
         await base.Array_of_DateTimeOffset();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -164,7 +246,7 @@ WHERE (
         await base.Array_of_bool();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -179,7 +261,7 @@ WHERE (
         await base.Array_of_Guid();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -189,16 +271,27 @@ WHERE (
 """);
     }
 
-    // The JSON representation for new[] { 1, 2 } is AQI= (base64), this cannot simply be cast to varbinary(max) (0x0102). See #30727.
-    public override Task Array_of_byte_array()
-        => AssertTranslationFailed(() => base.Array_of_byte_array());
+    public override async Task Array_of_byte_array()
+    {
+        await base.Array_of_byte_array();
+
+        AssertSql(
+            """
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM OPENJSON([t].[SomeArray]) WITH ([value] varbinary(max) '$') AS [s]
+    WHERE [s].[value] = 0x0102) = 2
+""");
+    }
 
     public override async Task Array_of_enum()
     {
         await base.Array_of_enum();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -208,19 +301,413 @@ WHERE (
 """);
     }
 
-    [ConditionalFact] // #30630
-    public override async Task Array_of_geometry_is_not_supported()
-    {
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => InitializeAsync<TestContext>(
-                onConfiguring: options => options.UseSqlServer(o => o.UseNetTopologySuite()),
-                addServices: s => s.AddEntityFrameworkSqlServerNetTopologySuite(),
-                onModelCreating: mb => mb.Entity<TestEntity>().Property<Point[]>("Points")));
+    [ConditionalFact]
+    public override Task Array_of_array_is_not_supported()
+        => base.Array_of_array_is_not_supported();
 
-        Assert.Equal(CoreStrings.PropertyNotMapped("Point[]", "TestEntity", "Points"), exception.Message);
-    }
+    [ConditionalFact]
+    public override Task Multidimensional_array_is_not_supported()
+        => base.Multidimensional_array_is_not_supported();
 
     #endregion Support for specific element types
+
+    #region Specific element types in ordered context
+
+    // When we don't need to preserve the collection's ordering (e.g. when Contains/Count is composed on top of it), we use OPENJSON with
+    // WITH, which handles all conversions out of JSON well.
+    // However, OPENJSON with WITH doesn't support preserving the ordering, so when that's needed we switch to OPENJSON without WITH, at
+    // which point we need to manually convert JSON values into their relational counterparts (this isn't always possible, e.g. varbinary
+    // which is base64 in JSON).
+    // The regular element type tests above test in unordered context, so we repeat them here but with an order-preserving context.
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_string()
+    {
+        await TestOrderedArray("a", "b");
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS nvarchar(max)) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = N'a') = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_int()
+    {
+        await TestOrderedArray(1, 2);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS int) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = 1) = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_long()
+    {
+        await TestOrderedArray(1L, 2L);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS bigint) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = CAST(1 AS bigint)) = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_short()
+    {
+        await TestOrderedArray((short)1, (short)2);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS smallint) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = CAST(1 AS smallint)) = 2
+""");
+    }
+
+    // On relational databases, byte[] gets mapped to a special binary data type, which isn't queryable as a regular primitive collection.
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_byte()
+        => await AssertTranslationFailed(() => TestOrderedArray((byte)1, (byte)2));
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_double()
+    {
+        await TestOrderedArray(1d, 2d);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS float) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = 1.0E0) = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_float()
+    {
+        await TestOrderedArray(1f, 2f);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS real) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = CAST(1 AS real)) = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_decimal()
+    {
+        await TestOrderedArray(1m, 2m);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS decimal(18,2)) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = 1.0) = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_DateTime()
+    {
+        await TestOrderedArray(new DateTime(2023, 1, 1, 12, 30, 0), new DateTime(2023, 1, 2, 12, 30, 0));
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS datetime2) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = '2023-01-01T12:30:00.0000000') = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_DateOnly()
+    {
+        await TestOrderedArray(new DateOnly(2023, 1, 1), new DateOnly(2023, 1, 2));
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS date) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = '2023-01-01') = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_TimeOnly()
+    {
+        await TestOrderedArray(new TimeOnly(12, 30, 0), new TimeOnly(12, 30, 1));
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS time) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = '12:30:00') = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_DateTimeOffset()
+    {
+        await TestOrderedArray(
+            new DateTimeOffset(2023, 1, 1, 12, 30, 0, TimeSpan.FromHours(2)),
+            new DateTimeOffset(2023, 1, 2, 12, 30, 0, TimeSpan.FromHours(2)));
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS datetimeoffset) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = '2023-01-01T12:30:00.0000000+02:00') = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_bool()
+    {
+        await TestOrderedArray(true, false);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS bit) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = CAST(1 AS bit)) = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_guid()
+    {
+        await TestOrderedArray(
+            new Guid("dc8c903d-d655-4144-a0fd-358099d40ae1"),
+            new Guid("008719a5-1999-4798-9cf3-92a78ffa94a2"));
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS uniqueidentifier) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = 'dc8c903d-d655-4144-a0fd-358099d40ae1') = 2
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_byte_array()
+    {
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => TestOrderedArray(new byte[] { 1, 2 }, new byte[] { 3, 4 }));
+
+        Assert.Equal(SqlServerStrings.QueryingOrderedBinaryJsonCollectionsNotSupported, exception.Message);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Ordered_array_of_enum()
+    {
+        await TestOrderedArray(MyEnum.Label1, MyEnum.Label2);
+
+        AssertSql(
+"""
+SELECT TOP(2) [t].[Id], [t].[Ints], [t].[SomeArray]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT COUNT(*)
+    FROM (
+        SELECT CAST([s].[value] AS int) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        FROM OPENJSON([t].[SomeArray]) AS [s]
+        ORDER BY CAST([s].[key] AS int)
+        OFFSET 1 ROWS
+    ) AS [t0]
+    WHERE [t0].[value] = 0) = 2
+""");
+    }
+
+    private enum MyEnum { Label1, Label2 }
+
+    private async Task TestOrderedArray<TElement>(
+        TElement value1,
+        TElement value2,
+        Action<ModelBuilder> onModelCreating = null)
+    {
+        var arrayClrType = typeof(TElement).MakeArrayType();
+
+        var contextFactory = await InitializeAsync<TestContext>(
+            onModelCreating: onModelCreating ?? (mb => mb.Entity<TestEntity>().Property(arrayClrType, "SomeArray")),
+            seed: context =>
+            {
+                var instance1 = new TestEntity { Id = 1 };
+                context.Add(instance1);
+                var array1 = new TElement[3];
+                array1.SetValue(value1, 0); // We have an extra copy of the first value which we'll Skip, to preserve the ordering
+                array1.SetValue(value1, 1);
+                array1.SetValue(value1, 2);
+                context.Entry(instance1).Property("SomeArray").CurrentValue = array1;
+
+                var instance2 = new TestEntity { Id = 2 };
+                context.Add(instance2);
+                var array2 = new TElement[3];
+                array2.SetValue(value1, 0);
+                array2.SetValue(value1, 1);
+                array2.SetValue(value2, 2);
+                context.Entry(instance2).Property("SomeArray").CurrentValue = array2;
+
+                context.SaveChanges();
+            });
+
+        await using var context = contextFactory.CreateContext();
+
+        var entityParam = Parameter(typeof(TestEntity), "m");
+        var efPropertyCall = Call(
+            typeof(EF).GetMethod(nameof(EF.Property), BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(arrayClrType),
+            entityParam,
+            Constant("SomeArray"));
+
+        var elementParam = Parameter(typeof(TElement), "a");
+        var predicate = Lambda<Func<TestEntity, bool>>(
+            Equal(
+                Call(
+                    CountWithPredicateMethod.MakeGenericMethod(typeof(TElement)),
+                    Call(
+                        SkipMethod.MakeGenericMethod(typeof(TElement)),
+                        efPropertyCall,
+                        Constant(1)),
+                    Lambda(Equal(elementParam, Constant(value1)), elementParam)),
+                Constant(2)),
+            entityParam);
+
+        // context.Set<TestEntity>().SingleAsync(m => EF.Property<int[]>(m, "SomeArray").Skip(1).Count(a => a == <value1>) == 2)
+        var result = await context.Set<TestEntity>().SingleAsync(predicate);
+        Assert.Equal(1, result.Id);
+    }
+
+    private static readonly MethodInfo CountWithPredicateMethod
+        = typeof(Enumerable).GetRuntimeMethods().Single(m => m.Name == nameof(Enumerable.Count) && m.GetParameters().Length == 2);
+
+    private static readonly MethodInfo SkipMethod
+        = typeof(Enumerable).GetRuntimeMethods().Single(m => m.Name == nameof(Enumerable.Skip) && m.GetParameters().Length == 2);
+
+    #endregion
+
+    [ConditionalFact]
+    public override Task Column_with_custom_converter()
+        => base.Column_with_custom_converter();
+
+    public override async Task Parameter_with_inferred_value_converter()
+    {
+        await base.Parameter_with_inferred_value_converter();
+
+        AssertSql("");
+    }
 
     #region Type mapping inference
 
@@ -229,7 +716,7 @@ WHERE (
         await base.Constant_with_inferred_value_converter();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints], [t].[PropertyWithValueConverter]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -244,7 +731,7 @@ WHERE (
         await base.Inline_collection_in_query_filter();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Ints]
 FROM [TestEntity] AS [t]
 WHERE (
@@ -259,7 +746,7 @@ WHERE (
         await base.Column_collection_inside_json_owned_entity();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Owned]
 FROM [TestOwner] AS [t]
 WHERE (
@@ -267,7 +754,7 @@ WHERE (
     FROM OPENJSON(JSON_VALUE([t].[Owned], '$.Strings')) AS [s]) = 2
 """,
             //
-"""
+            """
 SELECT TOP(2) [t].[Id], [t].[Owned]
 FROM [TestOwner] AS [t]
 WHERE JSON_VALUE(JSON_VALUE([t].[Owned], '$.Strings'), '$[1]') = N'bar'
@@ -297,7 +784,7 @@ WHERE JSON_VALUE(JSON_VALUE([t].[Owned], '$.Strings'), '$[1]') = N'bar'
             .ToArrayAsync();
 
         AssertSql(
-"""
+            """
 @__dateTimes_0='["2020-01-01T12:30:00","2020-01-02T12:30:00"]' (Size = 4000)
 @__dateTimes_0_1='["2020-01-01T12:30:00","2020-01-02T12:30:00"]' (Size = 4000)
 
@@ -328,7 +815,7 @@ WHERE [t].[DateTime] IN (
             .ToArrayAsync();
 
         AssertSql(
-"""
+            """
 @__dateTimes_0='["2020-01-01T12:30:00","2020-01-02T12:30:00",null]' (Size = 4000)
 
 SELECT [t].[Id], [t].[DateTime], [t].[Ints]
@@ -384,6 +871,10 @@ WHERE EXISTS (
     }
 
     #endregion Type mapping inference
+
+    [ConditionalFact]
+    public virtual void Check_all_tests_overridden()
+        => TestHelpers.AssertAllMethodsOverridden(GetType());
 
     protected override ITestStoreFactory TestStoreFactory
         => SqlServerTestStoreFactory.Instance;

@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+using static System.Linq.Expressions.Expression;
+
 public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedModelTestBase
 {
     #region Support for specific element types
@@ -44,12 +46,28 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
         => TestArray(new DateTime(2023, 1, 1, 12, 30, 0), new DateTime(2023, 1, 2, 12, 30, 0));
 
     [ConditionalFact]
+    public virtual Task Array_of_DateTime_with_milliseconds()
+        => TestArray(new DateTime(2023, 1, 1, 12, 30, 0, 123), new DateTime(2023, 1, 1, 12, 30, 0, 124));
+
+    [ConditionalFact]
+    public virtual Task Array_of_DateTime_with_microseconds()
+        => TestArray(new DateTime(2023, 1, 1, 12, 30, 0, 123, 456), new DateTime(2023, 1, 1, 12, 30, 0, 123, 457));
+
+    [ConditionalFact]
     public virtual Task Array_of_DateOnly()
         => TestArray(new DateOnly(2023, 1, 1), new DateOnly(2023, 1, 2));
 
     [ConditionalFact]
     public virtual Task Array_of_TimeOnly()
         => TestArray(new TimeOnly(12, 30, 0), new TimeOnly(12, 30, 1));
+
+    [ConditionalFact]
+    public virtual Task Array_of_TimeOnly_with_milliseconds()
+        => TestArray(new TimeOnly(12, 30, 0, 123), new TimeOnly(12, 30, 0, 124));
+
+    [ConditionalFact]
+    public virtual Task Array_of_TimeOnly_with_microseconds()
+        => TestArray(new TimeOnly(12, 30, 0, 123, 456), new TimeOnly(12, 30, 0, 124, 457));
 
     [ConditionalFact]
     public virtual Task Array_of_DateTimeOffset()
@@ -75,12 +93,7 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
     public virtual Task Array_of_enum()
         => TestArray(MyEnum.Label1, MyEnum.Label2);
 
-    enum MyEnum { Label1, Label2 }
-
-    // This ensures that collections of Geometry (e.g. Geometry[]) aren't mapped; NTS has GeometryCollection for that.
-    // See SQL Server/SQLite for a sample implementation.
-    [ConditionalFact] // #30630
-    public abstract Task Array_of_geometry_is_not_supported();
+    private enum MyEnum { Label1, Label2 }
 
     [ConditionalFact]
     public virtual async Task Array_of_array_is_not_supported()
@@ -92,8 +105,9 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
     [ConditionalFact]
     public virtual async Task Multidimensional_array_is_not_supported()
     {
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>().Property(typeof(int[,]), "MultidimensionalArray")));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => InitializeAsync<TestContext>(
+                onModelCreating: mb => mb.Entity<TestEntity>().Property(typeof(int[,]), "MultidimensionalArray")));
         Assert.Equal(CoreStrings.PropertyNotMapped("int[,]", "TestEntity", "MultidimensionalArray"), exception.Message);
     }
 
@@ -127,7 +141,9 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
         await AssertTranslationFailed(() => context.Set<TestEntity>().SingleAsync(m => m.Ints.Length == 2));
     }
 
-    [ConditionalFact(Skip = "Currently fails because we don't use the element mapping when serializing to JSON, but just do JsonSerializer.Serialize, #30677")]
+    [ConditionalFact(
+        Skip =
+            "Currently fails because we don't use the element mapping when serializing to JSON, but just do JsonSerializer.Serialize, #30677")]
     public virtual async Task Parameter_with_inferred_value_converter()
     {
         var contextFactory = await InitializeAsync<TestContext>(
@@ -177,12 +193,14 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
         Assert.Equal(1, result.Id);
     }
 
-    class IntWrapper
+    private class IntWrapper
     {
         public IntWrapper(int value)
-            => Value = value;
+        {
+            Value = value;
+        }
 
-        public int Value { get; set; }
+        public int Value { get; }
     }
 
     [ConditionalFact]
@@ -238,24 +256,24 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
 
         await using var context = contextFactory.CreateContext();
 
-        var entityParam = Expression.Parameter(typeof(TestEntity), "m");
-        var efPropertyCall = Expression.Call(
+        var entityParam = Parameter(typeof(TestEntity), "m");
+        var efPropertyCall = Call(
             typeof(EF).GetMethod(nameof(EF.Property), BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(arrayClrType),
             entityParam,
-            Expression.Constant("SomeArray"));
+            Constant("SomeArray"));
 
-        var elementParam = Expression.Parameter(typeof(TElement), "a");
-        var predicate = Expression.Lambda<Func<TestEntity, bool>>(
-            Expression.Equal(
-                Expression.Call(
+        var elementParam = Parameter(typeof(TElement), "a");
+        var predicate = Lambda<Func<TestEntity, bool>>(
+            Equal(
+                Call(
                     EnumerableMethods.CountWithPredicate.MakeGenericMethod(typeof(TElement)),
                     efPropertyCall,
-                    Expression.Lambda(
-                        Expression.Equal(elementParam, Expression.Constant(value1)),
+                    Lambda(Equal(elementParam, Constant(value1)),
                         elementParam)),
-            Expression.Constant(2)),
+                Constant(2)),
             entityParam);
 
+        // context.Set<TestEntity>().SingleAsync(m => EF.Property<int[]>(m, "SomeArray").Count(a => a == <value1>) == 2)
         var result = await context.Set<TestEntity>().SingleAsync(predicate);
         Assert.Equal(1, result.Id);
     }

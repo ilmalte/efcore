@@ -30,6 +30,7 @@ public class ComplexProperty : PropertyBase, IMutableComplexProperty, IConventio
         PropertyInfo? propertyInfo,
         FieldInfo? fieldInfo,
         TypeBase declaringType,
+        string? targetTypeName,
         [DynamicallyAccessedMembers(IEntityType.DynamicallyAccessedMemberTypes)] Type targetType,
         bool collection,
         ConfigurationSource configurationSource)
@@ -39,7 +40,7 @@ public class ComplexProperty : PropertyBase, IMutableComplexProperty, IConventio
         DeclaringType = declaringType;
         IsCollection = collection;
         ComplexType = new ComplexType(
-            declaringType.GetOwnedName(targetType.ShortDisplayName(), name),
+            targetTypeName ?? declaringType.GetOwnedName(targetType.ShortDisplayName(), name),
             targetType, this, configurationSource);
         _builder = new InternalComplexPropertyBuilder(this, declaringType.Model.Builder);
     }
@@ -215,7 +216,7 @@ public class ComplexProperty : PropertyBase, IMutableComplexProperty, IConventio
             if (shouldThrow)
             {
                 throw new InvalidOperationException(
-                    CoreStrings.NavigationCollectionWrongClrType(
+                    CoreStrings.ComplexCollectionWrongClrType(
                         propertyName,
                         sourceType.DisplayName(),
                         memberInfo.GetMemberType().ShortDisplayName(),
@@ -231,7 +232,7 @@ public class ComplexProperty : PropertyBase, IMutableComplexProperty, IConventio
             if (shouldThrow)
             {
                 throw new InvalidOperationException(
-                    CoreStrings.NavigationSingleWrongClrType(
+                    CoreStrings.ComplexPropertyWrongClrType(
                         propertyName,
                         sourceType.DisplayName(),
                         memberInfo.GetMemberType().ShortDisplayName(),
@@ -265,8 +266,8 @@ public class ComplexProperty : PropertyBase, IMutableComplexProperty, IConventio
     /// </summary>
     public virtual DebugView DebugView
         => new(
-            () => ((IReadOnlyEntityType)this).ToDebugString(),
-            () => ((IReadOnlyEntityType)this).ToDebugString(MetadataDebugStringOptions.LongDefault));
+            () => ((IReadOnlyComplexProperty)this).ToDebugString(),
+            () => ((IReadOnlyComplexProperty)this).ToDebugString(MetadataDebugStringOptions.LongDefault));
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

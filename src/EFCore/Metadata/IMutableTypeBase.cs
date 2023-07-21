@@ -29,7 +29,7 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
     /// <summary>
     ///     Gets this entity type or the one on which the complex property chain is declared.
     /// </summary>
-    new IMutableEntityType FundamentalEntityType
+    new IMutableEntityType ContainingEntityType
         => (IMutableEntityType)this;
 
     /// <summary>
@@ -227,12 +227,13 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
     ///     Adds a complex property to this type.
     /// </summary>
     /// <param name="memberInfo">The corresponding member on the class.</param>
+    /// <param name="complexTypeName">The name of the complex type.</param>
     /// <param name="collection">Indicates whether the property represents a collection.</param>
     /// <returns>The newly created property.</returns>
     [RequiresUnreferencedCode("Currently used only in tests")]
-    IMutableComplexProperty AddComplexProperty(MemberInfo memberInfo, bool collection = false)
+    IMutableComplexProperty AddComplexProperty(MemberInfo memberInfo, string? complexTypeName = null, bool collection = false)
         => AddComplexProperty(memberInfo.GetSimpleMemberName(), memberInfo.GetMemberType(),
-            collection ? memberInfo.GetMemberType().GetSequenceType() : memberInfo.GetMemberType(), collection);
+            collection ? memberInfo.GetMemberType().GetSequenceType() : memberInfo.GetMemberType(), complexTypeName, collection);
 
     /// <summary>
     ///     Adds a complex property to this type.
@@ -248,12 +249,14 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
     /// <param name="name">The name of the property to add.</param>
     /// <param name="propertyType">The property type.</param>
     /// <param name="complexType">The type of value the property will hold.</param>
+    /// <param name="complexTypeName">The name of the complex type.</param>
     /// <param name="collection">Indicates whether the property represents a collection.</param>
     /// <returns>The newly created property.</returns>
     IMutableComplexProperty AddComplexProperty(
         string name,
         [DynamicallyAccessedMembers(IProperty.DynamicallyAccessedMemberTypes)] Type propertyType,
         [DynamicallyAccessedMembers(IProperty.DynamicallyAccessedMemberTypes)] Type complexType,
+        string? complexTypeName = null,
         bool collection = false);
 
     /// <summary>
@@ -270,6 +273,7 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
     ///     </para>
     /// </param>
     /// <param name="complexType">The type of value the property will hold.</param>
+    /// <param name="complexTypeName">The name of the complex type.</param>
     /// <param name="collection">Indicates whether the property represents a collection.</param>
     /// <returns>The newly created property.</returns>
     IMutableComplexProperty AddComplexProperty(
@@ -277,6 +281,7 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
         [DynamicallyAccessedMembers(IProperty.DynamicallyAccessedMemberTypes)] Type propertyType,
         MemberInfo memberInfo,
         [DynamicallyAccessedMembers(IProperty.DynamicallyAccessedMemberTypes)] Type complexType,
+        string? complexTypeName = null,
         bool collection = false);
 
     /// <summary>
@@ -285,12 +290,14 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
     /// <param name="name">The name of the property to add.</param>
     /// <param name="propertyType">The property type.</param>
     /// <param name="complexType">The type of value the property will hold.</param>
+    /// <param name="complexTypeName">The name of the complex type.</param>
     /// <param name="collection">Indicates whether the property represents a collection.</param>
     /// <returns>The newly created property.</returns>
     IMutableComplexProperty AddComplexIndexerProperty(
         string name,
         [DynamicallyAccessedMembers(IProperty.DynamicallyAccessedMemberTypes)] Type propertyType,
         [DynamicallyAccessedMembers(IProperty.DynamicallyAccessedMemberTypes)] Type complexType,
+        string? complexTypeName = null,
         bool collection = false)
     {
         var indexerPropertyInfo = FindIndexerPropertyInfo();
@@ -300,7 +307,7 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
                 CoreStrings.NonIndexerEntityType(name, DisplayName(), typeof(string).ShortDisplayName()));
         }
 
-        return AddComplexProperty(name, propertyType, indexerPropertyInfo, complexType, collection);
+        return AddComplexProperty(name, propertyType, indexerPropertyInfo, complexType, complexTypeName, collection);
     }
 
     /// <summary>
@@ -381,6 +388,34 @@ public interface IMutableTypeBase : IReadOnlyTypeBase, IMutableAnnotatable
     /// <param name="property">The property to remove.</param>
     /// <returns>The removed property, or <see langword="null" /> if the property was not found.</returns>
     IMutableComplexProperty? RemoveComplexProperty(IReadOnlyProperty property);
+
+    /// <summary>
+    ///     Gets the members defined on this type and base types.
+    /// </summary>
+    /// <returns>Type members.</returns>
+    new IEnumerable<IMutablePropertyBase> GetMembers();
+
+    /// <summary>
+    ///     Gets the members declared on this type.
+    /// </summary>
+    /// <returns>Declared members.</returns>
+    new IEnumerable<IMutablePropertyBase> GetDeclaredMembers();
+
+    /// <summary>
+    ///     Gets the member with the given name. Returns <see langword="null" /> if no member with the given name is defined.
+    /// </summary>
+    /// <remarks>
+    ///     This API only finds scalar properties and does not find navigation, complex or service properties.
+    /// </remarks>
+    /// <param name="name">The name of the property.</param>
+    /// <returns>The property, or <see langword="null" /> if none is found.</returns>
+    new IMutablePropertyBase? FindMember(string name);
+
+    /// <summary>
+    ///    Gets the members with the given name on this type, base types or derived types..
+    /// </summary>
+    /// <returns>Type members.</returns>
+    new IEnumerable<IMutablePropertyBase> FindMembersInHierarchy(string name);
 
     /// <summary>
     ///     Sets the change tracking strategy to use for this type. This strategy indicates how the

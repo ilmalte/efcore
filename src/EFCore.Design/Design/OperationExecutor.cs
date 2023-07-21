@@ -684,6 +684,40 @@ public class OperationExecutor : MarshalByRefObject
         => ContextOperations.ScriptDbContext(contextType);
 
     /// <summary>
+    ///     Represents an operation to check if there are any pending migrations.
+    /// </summary>
+    public class HasPendingModelChanges : OperationBase
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="HasPendingModelChanges" /> class.
+        /// </summary>
+        /// <remarks>
+        ///     <para>The arguments supported by <paramref name="args" /> are:</para>
+        ///     <para><c>contextType</c>--The <see cref="DbContext" /> to use.</para>
+        /// </remarks>
+        /// <param name="executor">The operation executor.</param>
+        /// <param name="resultHandler">The <see cref="IOperationResultHandler" />.</param>
+        /// <param name="args">The operation arguments.</param>
+        public HasPendingModelChanges(
+            OperationExecutor executor,
+            IOperationResultHandler resultHandler,
+            IDictionary args)
+            : base(resultHandler)
+        {
+            Check.NotNull(executor, nameof(executor));
+            Check.NotNull(args, nameof(args));
+
+            var contextType = (string?)args["contextType"];
+
+            Execute(() => executor.HasPendingModelChangesImpl(contextType));
+        }
+    }
+
+    private void HasPendingModelChangesImpl(string? contextType)
+        => MigrationsOperations.HasPendingModelChanges(contextType);
+
+
+    /// <summary>
     ///     Represents an operation.
     /// </summary>
     public abstract class OperationBase : MarshalByRefObject

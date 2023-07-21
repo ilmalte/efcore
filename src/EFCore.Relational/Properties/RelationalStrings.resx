@@ -547,6 +547,9 @@
   <data name="JsonPropertyNameShouldBeConfiguredOnNestedNavigation" xml:space="preserve">
     <value>The JSON property name should only be configured on nested owned navigations.</value>
   </data>
+  <data name="JsonReaderInvalidTokenType" xml:space="preserve">
+    <value>Invalid token type: '{tokenType}'.</value>
+  </data>
   <data name="JsonRequiredEntityWithNullJson" xml:space="preserve">
     <value>Entity {entity} is required but the JSON element containing it is null.</value>
   </data>
@@ -573,7 +576,7 @@
     <comment>Debug RelationalEventId.BatchExecutorFailedToReleaseSavepoint</comment>
   </data>
   <data name="LogBatchExecutorFailedToRollbackToSavepoint" xml:space="preserve">
-    <value>An error occurred while rolling back the transaction to a savepoint, after an exception occured during `SaveChanges`.</value>
+    <value>An error occurred while rolling back the transaction to a savepoint, after an exception occurred during `SaveChanges`.</value>
     <comment>Debug RelationalEventId.BatchExecutorFailedToRollbackToSavepoint</comment>
   </data>
   <data name="LogBatchReadyForExecution" xml:space="preserve">
@@ -991,6 +994,9 @@
   </data>
   <data name="SetOperationsOnDifferentStoreTypes" xml:space="preserve">
     <value>Unable to translate set operation when matching columns on both sides have different store types.</value>
+  </data>
+  <data name="SetOperationsRequireAtLeastOneSideWithValidTypeMapping" xml:space="preserve">
+    <value>A set operation 'setOperationType' requires valid type mapping for at least one of its sides.</value>
   </data>
   <data name="SetPropertyMethodInvoked" xml:space="preserve">
     <value>The SetProperty&lt;TProperty&gt; method can only be used within 'ExecuteUpdate' method.</value>

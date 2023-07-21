@@ -1115,6 +1115,22 @@ public abstract class NorthwindFunctionsQueryTestBase<TFixture> : QueryTestBase<
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_math_degrees(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<OrderDetail>().Where(od => od.OrderID == 11077).Where(od => double.RadiansToDegrees(od.Discount) > 0),
+            entryCount: 13);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_math_radians(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<OrderDetail>().Where(od => od.OrderID == 11077).Where(od => double.DegreesToRadians(od.Discount) > 0),
+            entryCount: 13);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
     public virtual Task Where_mathf_abs1(bool async)
         => AssertQuery(
             async,
@@ -1305,6 +1321,22 @@ public abstract class NorthwindFunctionsQueryTestBase<TFixture> : QueryTestBase<
         => AssertQuery(
             async,
             ss => ss.Set<OrderDetail>().Where(od => od.OrderID == 11077).Where(od => MathF.Sign(od.Discount) > 0),
+            entryCount: 13);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_mathf_degrees(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<OrderDetail>().Where(od => od.OrderID == 11077).Where(od => float.RadiansToDegrees(od.Discount) > 0),
+            entryCount: 13);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_mathf_radians(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<OrderDetail>().Where(od => od.OrderID == 11077).Where(od => float.DegreesToRadians(od.Discount) > 0),
             entryCount: 13);
 
     [ConditionalTheory]
@@ -1917,4 +1949,14 @@ public abstract class NorthwindFunctionsQueryTestBase<TFixture> : QueryTestBase<
             ss => ss.Set<Order>().Where(o => o.OrderDate.HasValue && (o.OrderDate.Value - date).TotalDays > 365),
             entryCount: 267);
     }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_DateOnly_FromDateTime(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Order>()
+                .Where(o => o.OrderDate.HasValue && DateOnly.FromDateTime(o.OrderDate.Value) == new DateOnly(1996, 9, 16))
+                .AsTracking(),
+            entryCount: 1);
 }

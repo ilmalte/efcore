@@ -38,10 +38,10 @@ public class RuntimeComplexType : RuntimeTypeBase, IRuntimeComplexType
         : base(name, type, complexProperty.DeclaringType.Model, null, changeTrackingStrategy, indexerPropertyInfo, propertyBag)
     {
         ComplexProperty = complexProperty;
-        FundamentalEntityType = complexProperty.DeclaringType switch
+        ContainingEntityType = complexProperty.DeclaringType switch
         {
             RuntimeEntityType entityType => entityType,
-            RuntimeComplexType declaringComplexType => declaringComplexType.FundamentalEntityType,
+            RuntimeComplexType declaringComplexType => declaringComplexType.ContainingEntityType,
             _ => throw new NotImplementedException()
         };
     }
@@ -60,12 +60,52 @@ public class RuntimeComplexType : RuntimeTypeBase, IRuntimeComplexType
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    private RuntimeEntityType FundamentalEntityType { get; }
+    private RuntimeEntityType ContainingEntityType { get; }
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public override IEnumerable<RuntimePropertyBase> GetMembers()
+        => GetProperties()
+            .Concat<RuntimePropertyBase>(GetComplexProperties());
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public override IEnumerable<RuntimePropertyBase> GetDeclaredMembers()
+        => GetDeclaredProperties()
+            .Concat<RuntimePropertyBase>(GetDeclaredComplexProperties());
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public override RuntimePropertyBase? FindMember(string name)
+        => FindProperty(name)
+            ?? ((RuntimePropertyBase?)FindComplexProperty(name));
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public override IEnumerable<RuntimePropertyBase> FindMembersInHierarchy(string name)
+        => FindPropertiesInHierarchy(name)
+            .Concat<RuntimePropertyBase>(FindComplexPropertiesInHierarchy(name));
 
     /// <summary>
     ///     Gets or sets the <see cref="InstantiationBinding" /> for the preferred constructor.
     /// </summary>
-    public virtual InstantiationBinding? ConstructorBinding
+    public override InstantiationBinding? ConstructorBinding
     {
         get => !ClrType.IsAbstract
             ? NonCapturingLazyInitializer.EnsureInitialized(
@@ -112,7 +152,7 @@ public class RuntimeComplexType : RuntimeTypeBase, IRuntimeComplexType
     /// </summary>
     /// <returns>A string that represents the current object.</returns>
     public override string ToString()
-        => ((IReadOnlyEntityType)this).ToDebugString(MetadataDebugStringOptions.SingleLineDefault);
+        => ((IReadOnlyComplexType)this).ToDebugString(MetadataDebugStringOptions.SingleLineDefault);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -162,16 +202,16 @@ public class RuntimeComplexType : RuntimeTypeBase, IRuntimeComplexType
     }
 
     /// <inheritdoc />
-    IReadOnlyEntityType IReadOnlyTypeBase.FundamentalEntityType
+    IReadOnlyEntityType IReadOnlyTypeBase.ContainingEntityType
     {
         [DebuggerStepThrough]
-        get => FundamentalEntityType;
+        get => ContainingEntityType;
     }
 
     /// <inheritdoc />
-    IEntityType ITypeBase.FundamentalEntityType
+    IEntityType ITypeBase.ContainingEntityType
     {
         [DebuggerStepThrough]
-        get => FundamentalEntityType;
+        get => ContainingEntityType;
     }
 }

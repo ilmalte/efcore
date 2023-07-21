@@ -3,7 +3,8 @@
 
 using System.Collections;
 using System.Data;
-using System.Text.Json.Nodes;
+using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -322,19 +323,31 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
                 var navigation = finalUpdatePathElement.Navigation;
                 var jsonColumnTypeMapping = jsonColumn.StoreTypeMapping;
                 var navigationValue = finalUpdatePathElement.ParentEntry.GetCurrentValue(navigation);
-
-                var json = default(JsonNode?);
                 var jsonPathString = string.Join(
                     ".", updateInfo.Path.Select(x => x.PropertyName + (x.Ordinal != null ? "[" + x.Ordinal + "]" : "")));
-
-                object? singlePropertyValue = default;
-                if (updateInfo.Property != null)
+                if (updateInfo.Property is IProperty property)
                 {
-                    singlePropertyValue = GenerateValueForSinglePropertyUpdate(updateInfo.Property, updateInfo.PropertyValue);
-                    jsonPathString = jsonPathString + "." + updateInfo.Property.GetJsonPropertyName();
+                    var columnModificationParameters = new ColumnModificationParameters(
+                        jsonColumn.Name,
+                        value: updateInfo.PropertyValue,
+                        property: property,
+                        columnType: jsonColumnTypeMapping.StoreType,
+                        jsonColumnTypeMapping,
+                        jsonPath: jsonPathString + "." + updateInfo.Property.GetJsonPropertyName(),
+                        read: false,
+                        write: true,
+                        key: false,
+                        condition: false,
+                        _sensitiveLoggingEnabled) { GenerateParameterName = _generateParameterName };
+
+                    ProcessSinglePropertyJsonUpdate(ref columnModificationParameters);
+
+                    columnModifications.Add(new ColumnModification(columnModificationParameters));
                 }
                 else
                 {
+                    var stream = new MemoryStream();
+                    var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = false });
                     if (finalUpdatePathElement.Ordinal != null && navigationValue != null)
                     {
                         var i = 0;
@@ -342,12 +355,14 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
                         {
                             if (i == finalUpdatePathElement.Ordinal)
                             {
-                                json = CreateJson(
+                                WriteJson(
+                                    writer,
                                     navigationValueElement,
                                     finalUpdatePathElement.ParentEntry,
                                     navigation.TargetEntityType,
                                     ordinal: null,
-                                    isCollection: false);
+                                    isCollection: false,
+                                    isTopLevel: true);
 
                                 break;
                             }
@@ -357,29 +372,37 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
                     }
                     else
                     {
-                        json = CreateJson(
+                        WriteJson(
+                            writer,
                             navigationValue,
                             finalUpdatePathElement.ParentEntry,
                             navigation.TargetEntityType,
                             ordinal: null,
-                            isCollection: navigation.IsCollection);
+                            isCollection: navigation.IsCollection,
+                            isTopLevel: true);
                     }
+
+                    writer.Flush();
+
+                    var value = writer.BytesCommitted > 0
+                        ? Encoding.UTF8.GetString(stream.ToArray())
+                        : null;
+
+                    columnModifications.Add(
+                        new ColumnModification(
+                            new ColumnModificationParameters(
+                                jsonColumn.Name,
+                                value: value,
+                                property: updateInfo.Property,
+                                columnType: jsonColumnTypeMapping.StoreType,
+                                jsonColumnTypeMapping,
+                                jsonPath: jsonPathString,
+                                read: false,
+                                write: true,
+                                key: false,
+                                condition: false,
+                                _sensitiveLoggingEnabled) { GenerateParameterName = _generateParameterName }));
                 }
-
-                var columnModificationParameters = new ColumnModificationParameters(
-                    jsonColumn.Name,
-                    value: updateInfo.Property != null ? singlePropertyValue : json?.ToJsonString(),
-                    property: updateInfo.Property,
-                    columnType: jsonColumnTypeMapping.StoreType,
-                    jsonColumnTypeMapping,
-                    jsonPath: jsonPathString,
-                    read: false,
-                    write: true,
-                    key: false,
-                    condition: false,
-                    _sensitiveLoggingEnabled) { GenerateParameterName = _generateParameterName, };
-
-                columnModifications.Add(new ColumnModification(columnModificationParameters));
             }
         }
 
@@ -648,7 +671,7 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
             if (modifiedMembers.Count == 1)
             {
                 result.Property = modifiedMembers.Single().Metadata;
-                result.PropertyValue = entry.GetCurrentProviderValue(result.Property);
+                result.PropertyValue = entry.GetCurrentValue(result.Property);
             }
             else
             {
@@ -700,50 +723,85 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
     }
 
     /// <summary>
-    ///     Generates value to use for update in case a single property is being updated.
+    ///     Performs processing specifically needed for column modifications that correspond to single-property JSON updates.
     /// </summary>
-    /// <param name="property">Property to be updated.</param>
-    /// <param name="propertyValue">Value object that the property will be updated to.</param>
-    /// <returns>Value that the property will be updated to.</returns>
-    [EntityFrameworkInternal]
-    protected virtual object? GenerateValueForSinglePropertyUpdate(IProperty property, object? propertyValue)
+    /// <remarks>
+    ///     By default, strings, numeric types and bool and sent as a regular relational parameter, since database functions responsible for
+    ///     patching JSON documents support this. Other types get converted to JSON via the normal means and sent as a string parameter.
+    /// </remarks>
+    protected virtual void ProcessSinglePropertyJsonUpdate(ref ColumnModificationParameters parameters)
     {
-        var propertyProviderClrType = (property.GetTypeMapping().Converter?.ProviderClrType ?? property.ClrType).UnwrapNullableType();
+        var property = parameters.Property!;
+        var mapping = property.GetRelationalTypeMapping();
+        var propertyProviderClrType = (mapping.Converter?.ProviderClrType ?? property.ClrType).UnwrapNullableType();
+        var value = parameters.Value;
 
-        return (propertyProviderClrType == typeof(DateTime)
-            || propertyProviderClrType == typeof(DateTimeOffset)
-            || propertyProviderClrType == typeof(TimeSpan)
-            || propertyProviderClrType == typeof(Guid))
-            ? JsonValue.Create(propertyValue)?.ToJsonString().Replace("\"", "")
-            : propertyValue;
+        // On most databases, the function which patches a JSON document (e.g. SQL Server JSON_MODIFY) accepts relational string, numeric
+        // and bool types directly, without serializing it to a JSON string. So by default, for those cases simply return the value as-is,
+        // with the property's type mapping which will take care of sending the parameter with the relational value.
+        // Note that we haven't yet applied a value converter if one is configured, in order to allow for it to get applied later with
+        // the regular parameter flow.
+        if (value == null
+            || propertyProviderClrType == typeof(string)
+            || propertyProviderClrType == typeof(bool)
+            || propertyProviderClrType.IsNumeric())
+        {
+            parameters = parameters with { Value = value, TypeMapping = mapping };
+        }
+        else
+        {
+            var jsonValueReaderWriter = mapping.JsonValueReaderWriter;
+            value = jsonValueReaderWriter?.ToJsonString(value)[1..^1] // The JSON string contains enclosing quotes, remove these.
+                ?? (mapping.Converter == null ? value : mapping.Converter.ConvertToProvider(value));
+
+            parameters = parameters with { Value = value };
+        }
     }
 
-    private JsonNode? CreateJson(object? navigationValue, IUpdateEntry parentEntry, IEntityType entityType, int? ordinal, bool isCollection)
+    private void WriteJson(
+        Utf8JsonWriter writer,
+        object? navigationValue,
+        IUpdateEntry parentEntry,
+        IEntityType entityType,
+        int? ordinal,
+        bool isCollection,
+        bool isTopLevel)
     {
         if (navigationValue == null)
         {
-            return isCollection ? new JsonArray() : null;
+            if (!isTopLevel)
+            {
+                writer.WriteNullValue();
+            }
+
+            return;
         }
 
         if (isCollection)
         {
             var i = 1;
-            var jsonNodes = new List<JsonNode?>();
+            writer.WriteStartArray();
             foreach (var collectionElement in (IEnumerable)navigationValue)
             {
-                // TODO: should we ever expect null entities inside a collection?
-                var collectionElementJson = CreateJson(collectionElement, parentEntry, entityType, i++, isCollection: false);
-                jsonNodes.Add(collectionElementJson);
+                WriteJson(
+                    writer,
+                    collectionElement,
+                    parentEntry,
+                    entityType,
+                    i++,
+                    isCollection: false,
+                    isTopLevel: false);
             }
 
-            return new JsonArray(jsonNodes.ToArray());
+            writer.WriteEndArray();
+            return;
         }
 
 #pragma warning disable EF1001 // Internal EF Core API usage.
         var entry = (IUpdateEntry)((InternalEntityEntry)parentEntry).StateManager.TryGetEntry(navigationValue, entityType)!;
 #pragma warning restore EF1001 // Internal EF Core API usage.
 
-        var jsonNode = new JsonObject();
+        writer.WriteStartObject();
         foreach (var property in entityType.GetProperties())
         {
             if (property.IsKey())
@@ -758,8 +816,17 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
 
             // jsonPropertyName can only be null for key properties
             var jsonPropertyName = property.GetJsonPropertyName()!;
-            var value = entry.GetCurrentProviderValue(property);
-            jsonNode[jsonPropertyName] = JsonValue.Create(value);
+            var value = entry.GetCurrentValue(property);
+            writer.WritePropertyName(jsonPropertyName);
+
+            if (value is not null)
+            {
+                (property.GetJsonValueReaderWriter() ?? property.GetTypeMapping().JsonValueReaderWriter)!.ToJson(writer, value);
+            }
+            else
+            {
+                writer.WriteNullValue();
+            }
         }
 
         foreach (var navigation in entityType.GetNavigations())
@@ -772,17 +839,19 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
 
             var jsonPropertyName = navigation.TargetEntityType.GetJsonPropertyName()!;
             var ownedNavigationValue = entry.GetCurrentValue(navigation)!;
-            var navigationJson = CreateJson(
+
+            writer.WritePropertyName(jsonPropertyName);
+            WriteJson(
+                writer,
                 ownedNavigationValue,
                 entry,
                 navigation.TargetEntityType,
                 ordinal: null,
-                isCollection: navigation.IsCollection);
-
-            jsonNode[jsonPropertyName] = navigationJson;
+                isCollection: navigation.IsCollection,
+                isTopLevel: false);
         }
 
-        return jsonNode;
+        writer.WriteEndObject();
     }
 
     private ITableMapping? GetTableMapping(IEntityType entityType)
