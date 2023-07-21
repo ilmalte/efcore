@@ -1168,6 +1168,15 @@ namespace Microsoft.Data.Sqlite
         public void GetFloat_throws_when_non_query()
             => X_throws_when_non_query(r => r.GetFloat(0));
 
+#if NET6_0_OR_GREATER
+        [Fact]
+        public void GetHalf_throws_when_closed()
+            => X_throws_when_closed(r => r.GetHalf(0), nameof(SqliteDataReader.GetHalf));
+
+        [Fact]
+        public void GetHalf_throws_when_non_query()
+            => X_throws_when_non_query(r => r.GetHalf(0));
+#endif
         [Theory]
         [InlineData("2.0", 2.0)]
         [InlineData("9e999", double.PositiveInfinity)]

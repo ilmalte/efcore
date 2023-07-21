@@ -99,6 +99,11 @@ namespace Microsoft.Data.Sqlite
         public virtual float GetFloat(int ordinal)
             => (float)GetDouble(ordinal);
 
+        #if NET6_0_OR_GREATER
+        public virtual Half GetHalf(int ordinal)
+            => (Half)GetDouble(ordinal);
+        #endif
+
         public virtual Guid GetGuid(int ordinal)
         {
             var sqliteType = GetSqliteType(ordinal);
@@ -319,6 +324,13 @@ namespace Microsoft.Data.Sqlite
             {
                 return (T)(object)GetFloat(ordinal);
             }
+
+#if NET6_0_OR_GREATER
+            if (type == typeof(Half))
+            {
+                return (T)(object)GetFloat(ordinal);
+            }
+#endif
 
             if (type == typeof(Guid))
             {

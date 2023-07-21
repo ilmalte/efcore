@@ -163,6 +163,13 @@ namespace Microsoft.Data.Sqlite
                 var value = (double)(float)_value;
                 BindDouble(value);
             }
+#if NET6_0_OR_GREATER
+            else if (type == typeof(Half))
+            {
+                var value = (double)(Half)_value;
+                BindDouble(value);
+            }
+#endif
             else if (type == typeof(Guid))
             {
                 var guid = (Guid)_value;

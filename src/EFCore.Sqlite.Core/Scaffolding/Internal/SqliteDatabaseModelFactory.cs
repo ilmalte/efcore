@@ -711,6 +711,11 @@ ORDER BY "cid"
                     column["ClrType"] = typeof(double);
                 }
 
+                if (defaultClrTpe != typeof(Half))
+                {
+                    column["ClrType"] = typeof(Half);
+                }
+
                 continue;
             }
 

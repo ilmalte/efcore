@@ -440,6 +440,21 @@ namespace Microsoft.Data.Sqlite
                     ? throw new InvalidOperationException(Resources.NoData)
                     : _record.GetFloat(ordinal);
 
+
+#if NET6_0_OR_GREATER
+        /// <summary>
+        ///     Gets the value of the specified column as a <see cref="Half" />.
+        /// </summary>
+        /// <param name="ordinal">The zero-based column ordinal.</param>
+        /// <returns>The value of the column.</returns>
+        public virtual Half GetHalf(int ordinal)
+            => _closed
+                ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetHalf)))
+                : _record == null
+                    ? throw new InvalidOperationException(Resources.NoData)
+                    : _record.GetHalf(ordinal);
+#endif
+
         /// <summary>
         ///     Gets the value of the specified column as a <see cref="Guid" />.
         /// </summary>
